@@ -57,23 +57,66 @@ public class Config {
         }
     }
     
+    public static class WXYZT extends WXYZ {
+        public long time;
+        public WXYZT(String w, int x, int y, int z, long t) {
+            super(w, x, y, z);
+            time = t;
+        }
+    }
+
     private static class WorldGroupData {
         public Map<String, WXYZ> destinations;
         public List<String> worlds;
+        public long resetSavedLocationsOlderThan;
+        
+        WorldGroupData() {
+            destinations = new HashMap<>();
+            worlds = new ArrayList<>();
+            resetSavedLocationsOlderThan = 0;
+        }
+    }
+
+    private static class KeyCheckHashMap<T extends Object, U extends Object> extends HashMap<T, U> {
+        @Override
+        public U get(Object key) {
+            U value=super.get(key);
+            if (value == null) {
+                throw new IllegalArgumentException("bad argument: "+key.toString());
+            }
+            return value;
+        }
     }
 
     private static Map<String, WorldGroupData> config;
     private static File configFile;
     private static File configDir;
-    
+
+    /**
+     * Gets all defined world group names.
+     * @return defined names set
+     */    
     public static Set<String> getWorldGroups() {
         // System.out.println("getWorldGroups returns "+config.keySet());
         return config.keySet();
     }
+
+    /**
+     * Gets a list of worlds within a group. The first of them is the one that 
+     * players spawn into when they haven't visited that group yet.
+     * @param worldgroup The name of the worldgroup to get info for
+     * @return the list of worlds
+     */
     public static List<String> getWorldsInGroup(String worldgroup) {
         // System.out.println("getWorldsInGroup("+worldgroup+" returns "+config.get(worldgroup).worlds);
         return config.get(worldgroup).worlds;
     }
+
+    /**
+     * Gets the name of the group a particular world is in.
+     * @param world the world name to get the group for
+     * @return the name of the world group, or null if the world isn't in any group
+     */
     public static String getGroupForWorld(String world) {
         for (String group: config.keySet()) {
             if (config.get(group).worlds.contains(world)) {
@@ -83,6 +126,75 @@ public class Config {
         }
         return null;
     }
+    
+    /**
+     * Add an empty group
+     * @param groupName the name of the group
+     */
+    public static void addWorldGroup(String groupName) {
+        if (config.get(groupName) == null) {
+            config.put(groupName, new WorldGroupData());
+        }
+    }
+
+    /**
+     * Add a world to a group, removing it from all others
+     * @param worldName the world to add
+     * @param groupName the group to add the world to
+     */
+    public static void addWorldToGroup(String worldName, String groupName) {
+        addWorldGroup(groupName);
+        for (WorldGroupData wgd: config.values()) {
+            wgd.worlds.remove(worldName);
+        }
+        WorldGroupData wgd = config.get(groupName);
+        wgd.worlds.add(worldName);
+    }
+
+    /**
+     * Remove a world from a group, without adding it anywhere else
+     * @param worldName the world to remove
+     * @param groupName the group to remove the world from
+     */
+    public static void removeWorldFromGroup(String worldName, String groupName) {
+        config.get(groupName).worlds.remove(worldName);
+    }
+
+    /**
+     * Remove a world from all groups, for example, after it was deleted
+     * @param worldName the world to remove
+     */
+    public static void removeWorldFromAllGroups(String worldName) {
+        for (WorldGroupData wgd: config.values()) {
+            wgd.worlds.remove(worldName);
+        }
+    }
+
+    /**
+     * Set the time when a world was reset, which means players that have
+     * saved their location in that world can't safely use that location 
+     * anymore.
+     * @param groupName
+     * @param timestamp 
+     */
+    public static void setWorldGroupResetTimestamp(String groupName, long timestamp) {
+        config.get(groupName).resetSavedLocationsOlderThan = timestamp;
+    }
+    
+    /**
+     * Find the timestamp when the world group was reset last.
+     * @param groupName the group for which the time needs to be found
+     * @return the reset timestamp for that world
+     */
+    public static long getWorldGroupResetTimestamp(String groupName) {
+        return config.get(groupName).resetSavedLocationsOlderThan;
+    }
+
+    /**
+     * Get all named destinations within a world
+     * @param worldgroup
+     * @return a Map that contains the location name as keys, and the location as entries
+     */
     public static Map<String, Location> getDestinations(String worldgroup) {
         Map<String, WXYZ> savedMap=config.get(worldgroup).destinations;
         Map<String, Location> destinations=new HashMap<>();
@@ -91,24 +203,64 @@ public class Config {
         }
         return destinations;
     }
-    
-    public static void setLastPlayerLocation(Player player, String worldgroup, Location loc) {
-        // System.out.println("setting last location for "+player.getName()+" in "+worldgroup+" to "+loc);
-        Map<String, WXYZ> playerConfig=getPlayerConfig(player);
-        playerConfig.put(worldgroup, wxyzFromLocation(loc));
-        savePlayerConfig(player, playerConfig);
+
+    /**
+     * Add a new destination to a world group
+     * @param worldgroup the world group that has the destination
+     * @param destName the name of the destination
+     * @param loc the location of the destination
+     */
+    public static void addDestination(String worldgroup, String destName, Location loc) {
+        config.get(worldgroup).destinations.put(destName, wxyztFromLocation(loc));
     }
     
-    public static Location getLastPlayerLocation(Player player, String worldgroup) {
-        Map<String, WXYZ> playerConfig=getPlayerConfig(player);
-        WXYZ wxyz = playerConfig.get(worldgroup);
-        if (wxyz==null)
+    /**
+     * Removes a destination from a world group
+     * @param worldgroup the world group that has the destination
+     * @param destName the name of the destination
+     */
+    public static void removeDestination(String worldgroup, String destName) {
+        config.get(worldgroup).destinations.remove(destName);
+    }
+
+    /**
+     * Returns the last location a player had in a certain world group. This is
+     * the location the player should teleport to when porting to that group.
+     * 
+     * If the player has visited the world before, and the world has since
+     * been reset, the safety flag is set to false. In general, that means the
+     * location should not be teleported to.
+     * 
+     * @param player the player to get the location for
+     * @param worldgroup the world group in which to search for the location
+     * @return the last saved location for the player, or null if the player
+     * has never visited that world.
+     */
+    public static LocationWithSafetyFlag getLastPlayerLocation(Player player, String worldgroup) {
+        Map<String, WXYZT> playerConfig=getPlayerConfig(player);
+        WXYZT wxyzt = playerConfig.get(worldgroup);
+        if (wxyzt==null)
             return null;
-        return locationFromWxyz(wxyz);
+        LocationWithSafetyFlag result=locationFromWxyz(wxyzt);
+        long reset=config.get(worldgroup).resetSavedLocationsOlderThan;
+        if (reset > wxyzt.time)
+            result.setSafe(false);
+        return result;
     }
-    
-    private static Map<String, WXYZ> getPlayerConfig(Player player) {
-        Type type=new TypeToken<Map<String, WXYZ>>(){}.getType();
+
+    /**
+     * Returns the timestamp when a player has last left a worldgroup
+     * @param player
+     * @param worldgroup
+     * @return timestamp
+     */
+    public static long getLastPlayerTimestamp(Player player, String worldgroup) {
+        Map<String, WXYZT> playerConfig=getPlayerConfig(player);
+        return playerConfig.get(worldgroup).time;
+    }
+
+    private static Map<String, WXYZT> getPlayerConfig(Player player) {
+        Type type=new TypeToken<Map<String, WXYZT>>(){}.getType();
         try(JsonReader reader=new JsonReader(new FileReader(getPlayerConfigFile(player)))) {
             Gson gson=new Gson();
             return gson.fromJson(reader, type);
@@ -120,7 +272,14 @@ public class Config {
         return new HashMap<>();
     }
     
-    private static void savePlayerConfig(Player player, Map<String, WXYZ> playerConfig) {
+    public static void setLastPlayerLocation(Player player, String worldgroup, Location loc) {
+        // System.out.println("setting last location for "+player.getName()+" in "+worldgroup+" to "+loc);
+        Map<String, WXYZT> playerConfig=getPlayerConfig(player);
+        playerConfig.put(worldgroup, wxyztFromLocation(loc));
+        savePlayerConfig(player, playerConfig);
+    }
+
+    private static void savePlayerConfig(Player player, Map<String, WXYZT> playerConfig) {
         try (FileWriter writer = new FileWriter(getPlayerConfigFile(player))) {
             Gson gson = new GsonBuilder()
                     .setPrettyPrinting()
@@ -136,16 +295,16 @@ public class Config {
         return new File(configDir, player.getUniqueId().toString()+".json");
     }
     
-    static Location locationFromWxyz(WXYZ wxyz) {
-        return new Location(Bukkit.getWorld(wxyz.world), wxyz.x, wxyz.y, wxyz.z);
+    static LocationWithSafetyFlag locationFromWxyz(WXYZ wxyz) {
+        return new LocationWithSafetyFlag(Bukkit.getWorld(wxyz.world), wxyz.x, wxyz.y, wxyz.z);
     }
     
-    static WXYZ wxyzFromLocation(Location loc) {
-        return new WXYZ(loc.getWorld().getName(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
+    static WXYZT wxyztFromLocation(Location loc) {
+        return new WXYZT(loc.getWorld().getName(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ(), System.currentTimeMillis());
     }
 
     public static void load(Main instance) {
-        Type mapType = new TypeToken<Map<String, WorldGroupData>>(){}.getType();
+        Type mapType = new TypeToken<KeyCheckHashMap<String, WorldGroupData>>(){}.getType();
         configDir=instance.getDataFolder();
         configFile=new File(instance.getDataFolder(), "config.json");
         try (JsonReader reader=new JsonReader(new FileReader(configFile))) {
@@ -159,7 +318,7 @@ public class Config {
             }
         } catch (IOException | JsonSyntaxException ex) {
             System.err.println(ex.getClass().getName()+" when reading config; creating a fresh one");
-            config=new HashMap<>();
+            config=new KeyCheckHashMap<>();
             WorldGroupData wgdata=new WorldGroupData();
             wgdata.destinations=new HashMap<>();
             wgdata.worlds=new ArrayList<>();
