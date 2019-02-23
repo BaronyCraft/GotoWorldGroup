@@ -1,0 +1,18 @@
+name: GotoWorldGroup
+author: BaronyCraft
+description: Group multiverse worlds to worldgroups between players can move, remembering their position in each group
+version: 1.0.0
+api-version: 1.13
+main: de.guntram.bukkit.GotoWorldGroup.Main
+softdepend: [ Multiverse-Core ]
+commands:
+  goto:
+    description: Go to worldgroup
+    aliases: [go]
+    usage: /go <worldname>
+permissions:
+  gotoworldgroup.goto:
+    description: Allow going to different worldgroups in general
+    default: op
+    children:
+      gotoworldgroup.goto.*: true
