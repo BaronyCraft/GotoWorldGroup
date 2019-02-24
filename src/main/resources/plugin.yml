@@ -9,10 +9,18 @@ commands:
   goto:
     description: Go to worldgroup
     aliases: [go]
-    usage: /go <worldname>
+    usage: /goto <groupname>
+  gwg:
+    description: Configure GotoWorldGroup
+    usage: /gwg setunsafe <groupname>
 permissions:
   gotoworldgroup.goto:
     description: Allow going to different worldgroups in general
     default: op
     children:
       gotoworldgroup.goto.*: true
+  gotoworldgroup.gwg.*:
+    description: Allow GotoWorldGroup configuration
+    default: op
+    children:
+      gotoworldgroup.gwg.setunsafe: true

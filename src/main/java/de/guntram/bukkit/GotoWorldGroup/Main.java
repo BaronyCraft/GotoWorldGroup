@@ -1,12 +1,9 @@
 package de.guntram.bukkit.GotoWorldGroup;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -15,9 +12,8 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.util.StringUtil;
 
-public class Main extends JavaPlugin implements Listener, TabCompleter {
+public class Main extends JavaPlugin implements Listener {
     
     public static Main instance;
     
@@ -26,7 +22,8 @@ public class Main extends JavaPlugin implements Listener, TabCompleter {
         if (instance==null)
             instance=this;
         getServer().getPluginManager().registerEvents(this, this);
-        getCommand("goto").setTabCompleter(this);
+        getCommand("goto").setTabCompleter(new GotoTabCompleter());
+        getCommand("gwg").setTabCompleter(new GwgTabCompleter());
         Config.load(instance);
     }
     
@@ -77,6 +74,11 @@ public class Main extends JavaPlugin implements Listener, TabCompleter {
             ((Player)sender).teleport(targetLocation, PlayerTeleportEvent.TeleportCause.COMMAND);
             return true;
         }
+        if (commandName.equals("gwg")) {
+            if (args.length==2 && args[0].equals("setunsafe")) {
+                Config.setWorldGroupResetTimestamp(args[1], System.currentTimeMillis());
+            }
+        }
         return false;
     }
     
@@ -117,22 +119,6 @@ public class Main extends JavaPlugin implements Listener, TabCompleter {
             warnAboutUnsafeWorld(player);
             player.teleport(player.getLocation().getWorld().getSpawnLocation());
         }
-    }
-    
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String label, String[] args) {
-        List<String> completions=new ArrayList<>();
-        if (args.length == 1) {
-            for (String group: Config.getWorldGroups()) {
-                if (StringUtil.startsWithIgnoreCase(group, args[0]) && sender.hasPermission("gotoworldgroup.goto."+group)) {
-                    completions.add(group);
-                }
-            }
-        }
-        else if (args.length == 2) {
-            StringUtil.copyPartialMatches(args[1], Config.getDestinations(args[0]).keySet(), completions);
-        }
-        return completions;
     }
 
     private void warnAboutUnsafeWorld(CommandSender sender) {
