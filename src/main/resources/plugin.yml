@@ -12,7 +12,7 @@ commands:
     usage: /goto <groupname>
   gwg:
     description: Configure GotoWorldGroup
-    usage: /gwg setunsafe <groupname>
+    usage: /gwg setunsafe <groupname> | adddestination <name> <worldname> <x> <y> <z>
 permissions:
   gotoworldgroup.goto:
     description: Allow going to different worldgroups in general
@@ -24,3 +24,4 @@ permissions:
     default: op
     children:
       gotoworldgroup.gwg.setunsafe: true
+      gotoworldgroup.gwg.adddestination: true

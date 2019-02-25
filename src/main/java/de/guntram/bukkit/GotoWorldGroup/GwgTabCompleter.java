@@ -7,7 +7,10 @@ package de.guntram.bukkit.GotoWorldGroup;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import org.bukkit.Bukkit;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
@@ -19,7 +22,7 @@ import org.bukkit.util.StringUtil;
  */
 public class GwgTabCompleter implements TabCompleter {
     
-    static List<String> subCommands = Arrays.asList(new String[]{"setunsafe"});
+    static List<String> subCommands = Arrays.asList(new String[]{"adddestination", "setunsafe"});
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String label, String[] args) {
 
@@ -34,6 +37,19 @@ public class GwgTabCompleter implements TabCompleter {
         else if (args.length == 2) {
             if (args[0].equals("setunsafe")) {
                 StringUtil.copyPartialMatches(args[1], Config.getWorldGroups(), completions);
+            }
+            if (args[0].equals("adddestination") && args[1].length()==0) {
+                completions.add("destinationname");
+            }
+        }
+        else if (args.length == 3) {
+            if (args[0].equals("adddestination")) {
+                for (World world: Bukkit.getWorlds()) {
+                    if (StringUtil.startsWithIgnoreCase(world.getName(), args[2])) {
+                        completions.add(world.getName());
+                    }
+                }
+                Collections.sort(completions);
             }
         }
         return completions;

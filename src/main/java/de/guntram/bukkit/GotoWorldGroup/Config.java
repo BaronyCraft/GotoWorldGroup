@@ -134,6 +134,7 @@ public class Config {
     public static void addWorldGroup(String groupName) {
         if (config.get(groupName) == null) {
             config.put(groupName, new WorldGroupData());
+            save();
         }
     }
 
@@ -149,6 +150,7 @@ public class Config {
         }
         WorldGroupData wgd = config.get(groupName);
         wgd.worlds.add(worldName);
+        save();
     }
 
     /**
@@ -158,6 +160,7 @@ public class Config {
      */
     public static void removeWorldFromGroup(String worldName, String groupName) {
         config.get(groupName).worlds.remove(worldName);
+        save();
     }
 
     /**
@@ -168,6 +171,7 @@ public class Config {
         for (WorldGroupData wgd: config.values()) {
             wgd.worlds.remove(worldName);
         }
+        save();
     }
 
     /**
@@ -179,6 +183,7 @@ public class Config {
      */
     public static void setWorldGroupResetTimestamp(String groupName, long timestamp) {
         config.get(groupName).resetSavedLocationsOlderThan = timestamp;
+        save();
     }
     
     /**
@@ -206,14 +211,19 @@ public class Config {
 
     /**
      * Add a new destination to a world group
-     * @param worldgroup the world group that has the destination
+     * @param worldgroup the world group that has the destination. Can be null,
+     * in this case, the group is inferred from the world in location.
      * @param destName the name of the destination
      * @param loc the location of the destination
      */
     public static void addDestination(String worldgroup, String destName, Location loc) {
+        if (worldgroup==null || worldgroup.isEmpty()) {
+            worldgroup=getGroupForWorld(loc.getWorld().getName());
+        }
         config.get(worldgroup).destinations.put(destName, wxyztFromLocation(loc));
+        save();
     }
-    
+
     /**
      * Removes a destination from a world group
      * @param worldgroup the world group that has the destination
@@ -221,6 +231,7 @@ public class Config {
      */
     public static void removeDestination(String worldgroup, String destName) {
         config.get(worldgroup).destinations.remove(destName);
+        save();
     }
 
     /**

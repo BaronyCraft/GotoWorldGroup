@@ -1,7 +1,9 @@
 package de.guntram.bukkit.GotoWorldGroup;
 
 import java.util.Map;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -75,8 +77,34 @@ public class Main extends JavaPlugin implements Listener {
             return true;
         }
         if (commandName.equals("gwg")) {
+            if (args.length<1)
+                return false;
+            if (!(sender.hasPermission("gotoworldgroup.gwg."+args[0]))) {
+                sender.sendMessage("You cannot do that");
+                return true;
+            }
             if (args.length==2 && args[0].equals("setunsafe")) {
                 Config.setWorldGroupResetTimestamp(args[1], System.currentTimeMillis());
+                return true;
+            }
+            if (args.length==6 && args[0].equals("adddestination")) {
+                String name=args[1], worldName=args[2];
+                World world=Bukkit.getWorld(worldName);
+                if (world==null) {
+                    sender.sendMessage("World "+worldName+" doesn't exist");
+                    return true;
+                }
+                int x, y, z;
+                try {
+                    x=Integer.parseInt(args[3]);
+                    y=Integer.parseInt(args[4]);
+                    z=Integer.parseInt(args[5]);
+                } catch (NumberFormatException ex) {
+                    sender.sendMessage("all three coordinates must be integers");
+                    return true;
+                }
+                Config.addDestination(null, name, new Location(world, x, y, z));
+                return true;
             }
         }
         return false;
