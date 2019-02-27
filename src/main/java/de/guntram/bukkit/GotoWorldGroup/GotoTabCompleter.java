@@ -29,7 +29,9 @@ public class GotoTabCompleter implements TabCompleter {
             }
         }
         else if (args.length == 2) {
-            StringUtil.copyPartialMatches(args[1], Config.getDestinations(args[0]).keySet(), completions);
+            if (Config.getWorldGroups().contains(args[0])) {
+                StringUtil.copyPartialMatches(args[1], Config.getDestinations(args[0]).keySet(), completions);
+            }
         }
         return completions;
     }
