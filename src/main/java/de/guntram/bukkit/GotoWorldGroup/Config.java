@@ -48,8 +48,8 @@ public class Config {
 
     public static class WXYZ {
         public String world;
-        public int x, y, z;
-        public WXYZ(String w, int x, int y, int z) {
+        public double x, y, z;
+        public WXYZ(String w, double x, double y, double z) {
             this.world=w;
             this.x=x;
             this.y=y;
@@ -59,7 +59,7 @@ public class Config {
     
     public static class WXYZT extends WXYZ {
         public long time;
-        public WXYZT(String w, int x, int y, int z, long t) {
+        public WXYZT(String w, double x, double y, double z, long t) {
             super(w, x, y, z);
             time = t;
         }
@@ -311,7 +311,7 @@ public class Config {
     }
     
     static WXYZT wxyztFromLocation(Location loc) {
-        return new WXYZT(loc.getWorld().getName(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ(), System.currentTimeMillis());
+        return new WXYZT(loc.getWorld().getName(), loc.getX(), loc.getY(), loc.getZ(), System.currentTimeMillis());
     }
 
     public static void load(Main instance) {
@@ -336,7 +336,7 @@ public class Config {
             for (World world: instance.getServer().getWorlds()) {
                 Location loc=world.getSpawnLocation();
                 wgdata.destinations.put(world.getName()+"-spawn", 
-                        new WXYZ(loc.getWorld().getName(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()));
+                        new WXYZ(loc.getWorld().getName(), loc.getX(), loc.getY(), loc.getZ()));
                 wgdata.worlds.add(world.getName());
             }
             config.put("allworlds", wgdata);
