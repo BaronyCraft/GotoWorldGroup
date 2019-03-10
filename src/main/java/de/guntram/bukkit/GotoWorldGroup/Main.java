@@ -10,8 +10,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerBedEnterEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -69,7 +71,9 @@ public class Main extends JavaPlugin implements Listener {
                 targetLocation = Config.getLastPlayerLocation((Player)sender, args[0]);
                 if (targetLocation == null || !(((LocationWithSafetyFlag)targetLocation).isSafe())) {
                     String firstWorld = Config.getWorldsInGroup(args[0]).get(0);
-                    warnAboutUnsafeWorld(sender);
+                    if (targetLocation != null) {
+                        warnAboutUnsafeWorld(sender);
+                    }
                     targetLocation = getServer().getWorld(firstWorld).getSpawnLocation();
                 }
             }
@@ -146,6 +150,29 @@ public class Main extends JavaPlugin implements Listener {
         if (lastPlayerLocation != null && !lastPlayerLocation.isSafe()) {
             warnAboutUnsafeWorld(player);
             player.teleport(player.getLocation().getWorld().getSpawnLocation());
+        }
+    }
+
+    @EventHandler(priority = EventPriority.NORMAL)
+    public void onPlayerEnterBedEvent(PlayerBedEnterEvent event) {
+        Player player=event.getPlayer();
+        Location loc = event.getBed().getLocation();
+        String groupName=Config.getGroupForWorld(loc.getWorld().getName());
+        Config.setLastPlayerLocation(player, "BED-"+groupName, loc);
+    }
+
+    @EventHandler(priority = EventPriority.NORMAL)
+    public void onPlayerRespawnEvent(PlayerRespawnEvent event) {
+        Player player=event.getPlayer();
+        System.out.println("Player location is "+player.getLocation());
+        String groupName=Config.getGroupForWorld(player.getLocation().getWorld().getName());
+        LocationWithSafetyFlag newLoc = Config.getLastPlayerLocation(player, "BED-"+groupName, groupName);
+        if (newLoc!=null && newLoc.isSafe()) {
+            System.out.println("set spawn location "+newLoc+", event.isbed="+event.isBedSpawn());
+            event.setRespawnLocation(newLoc);
+        } else {
+            System.out.println("Sending player to spawn as their bed isn't safe");
+            event.setRespawnLocation(player.getLocation().getWorld().getSpawnLocation());
         }
     }
 

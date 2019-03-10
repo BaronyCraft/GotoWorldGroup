@@ -248,12 +248,25 @@ public class Config {
      * has never visited that world.
      */
     public static LocationWithSafetyFlag getLastPlayerLocation(Player player, String worldgroup) {
+        return getLastPlayerLocation(player, worldgroup, worldgroup);
+    }
+
+    /**
+     * Same as above, but usable in cases where the player saved worldgroup has
+     * a prefix/suffix or is otherwise different from the official worldgroup name
+     * 
+     * @param player the player to get the location for
+     * @param worldgroupPlayer the world group saved with the player. Can be BED-<groupname> for bed spawn.
+     * @param worldgroupConfig the world group to look up in the global config file
+     * @return 
+     */
+    public static LocationWithSafetyFlag getLastPlayerLocation(Player player, String worldgroupPlayer, String worldgroupConfig) {
         Map<String, WXYZT> playerConfig=getPlayerConfig(player);
-        WXYZT wxyzt = playerConfig.get(worldgroup);
+        WXYZT wxyzt = playerConfig.get(worldgroupPlayer);
         if (wxyzt==null)
             return null;
         LocationWithSafetyFlag result=locationFromWxyz(wxyzt);
-        long reset=config.get(worldgroup).resetSavedLocationsOlderThan;
+        long reset=config.get(worldgroupConfig).resetSavedLocationsOlderThan;
         if (reset > wxyzt.time)
             result.setSafe(false);
         return result;
