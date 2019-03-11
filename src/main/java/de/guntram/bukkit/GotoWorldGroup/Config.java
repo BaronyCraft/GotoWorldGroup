@@ -91,6 +91,7 @@ public class Config {
     private static Map<String, WorldGroupData> config;
     private static File configFile;
     private static File configDir;
+    private static String defaultWorldGroupName="allworlds";
 
     /**
      * Gets all defined world group names.
@@ -124,7 +125,9 @@ public class Config {
                 return group;
             }
         }
-        return null;
+        addWorldGroup(defaultWorldGroupName);
+        addWorldToGroup(world, defaultWorldGroupName);
+        return defaultWorldGroupName;
     }
     
     /**
@@ -352,7 +355,7 @@ public class Config {
                         new WXYZ(loc.getWorld().getName(), loc.getX(), loc.getY(), loc.getZ()));
                 wgdata.worlds.add(world.getName());
             }
-            config.put("allworlds", wgdata);
+            config.put(defaultWorldGroupName, wgdata);
             instance.getDataFolder().mkdirs();
             // Try to stash the old file before we write a good one
             configFile.renameTo(new File(instance.getDataFolder(), "config.malformed_json."+System.currentTimeMillis()));
