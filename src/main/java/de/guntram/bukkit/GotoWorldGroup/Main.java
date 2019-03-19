@@ -59,9 +59,21 @@ public class Main extends JavaPlugin implements Listener {
 
             if (args.length > 1) {
                 Map<String, Location> destinations = Config.getDestinations(args[0]);
-                if (destinations == null || ((targetLocation=destinations.get(args[1]))) == null) {
-                    sender.sendMessage("Destination "+args[1]+" does not exist in world group "+args[0]);
+                if (destinations==null) {
+                    sender.sendMessage("No destinations defined in "+args[0]);
                     return true;
+                }
+                if (((targetLocation=destinations.get(args[1]))) == null) {
+                    for (String key: destinations.keySet()) {
+                        if (key.equalsIgnoreCase(args[1])) {
+                            targetLocation=destinations.get(key);
+                            break;
+                        }
+                    }
+                    if (targetLocation==null) {
+                        sender.sendMessage("Destination "+args[1]+" does not exist in world group "+args[0]);
+                        return true;
+                    }
                 }
             } else {
                 if (args[0].equals(Config.getGroupForWorld(((Player)sender).getLocation().getWorld().getName()))) {
